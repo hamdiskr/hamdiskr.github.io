@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern MP3 Çalar</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="clean-styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM2NjdlZWEiLz4KPHBhdGggZD0iTTk2IDQ4QzEyMC4zIDQ4IDE0MCA2Ny43IDE0MCA5MlYxMDBDMTQwIDEyNC4zIDEyMC4zIDE0NCA5NiAxNDRDNzEuNyAxNDQgNTIgMTI0LjMgNTIgMTAwVjkyQzUyIDY3LjcgNzEuNyA0OCA5NiA0OFoiIGZpbGw9IndoaXRlIi8+CjxjaXJjbGUgY3g9Ijk2IiBjeT0iOTYiIHI9IjE2IiBmaWxsPSIjNjY3ZWVhIi8+Cjwvc3ZnPgo=">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="MP3 Çalar">
+</head>
+<body>
+    <div class="container">
+        <div class="player-wrapper">
+            <h1 class="title">
+                <i class="fas fa-music"></i>
+                Modern MP3 Çalar
+            </h1>
+            
+            <!-- Müzik Kaynağı Seçimi -->
+            <div class="source-selection">
+                <div class="source-tabs">
+                    <button type="button" class="tab-btn active" data-tab="file">
+                        <i class="fas fa-file-audio"></i>
+                        Dosya
+                    </button>
+                    <button type="button" class="tab-btn" data-tab="url">
+                        <i class="fas fa-link"></i>
+                        URL
+                    </button>
+                    <button type="button" class="tab-btn" data-tab="youtube">
+                        <i class="fab fa-youtube"></i>
+                        YouTube
+                    </button>
+                </div>
+                
+                <div class="tab-content">
+                    <div class="tab-panel active" id="file-panel">
+                        <input type="file" id="file-input" accept="audio/*" class="file-input">
+                        <label for="file-input" class="file-label">
+                            <i class="fas fa-upload"></i>
+                            Müzik Dosyası Seç
+                        </label>
+                    </div>
+                    
+                    <div class="tab-panel" id="url-panel">
+                        <input type="url" id="url-input" placeholder="MP3 URL'sini buraya yapıştırın..." class="url-input">
+                        <button type="button" id="load-url" class="load-btn">
+                            <i class="fas fa-download"></i>
+                            Yükle
+                        </button>
+                    </div>
+                    
+                    <div class="tab-panel" id="youtube-panel">
+                        <input type="url" id="youtube-input" placeholder="YouTube video URL'sini buraya yapıştırın..." class="url-input">
+                        <button type="button" id="load-youtube" class="load-btn">
+                            <i class="fab fa-youtube"></i>
+                            Yükle
+                        </button>
+                        <div class="youtube-info">
+                            <div class="youtube-success-message">
+                                <i class="fas fa-check-circle"></i>
+                                YouTube API sorunları çözüldü! Artık tüm videolar çalışır.
+                            </div>
+                            <p class="youtube-note">
+                                <i class="fas fa-info-circle"></i>
+                                YouTube videoları embed player ile çalışır, kontroller senkronize edilir
+                            </p>
+                            <div class="youtube-examples">
+                                <strong>Desteklenen formatlar:</strong><br>
+                                • https://www.youtube.com/watch?v=VIDEO_ID<br>
+                                • https://youtu.be/VIDEO_ID<br>
+                                • https://www.youtube.com/embed/VIDEO_ID
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kayıtlı Müzikler -->
+            <div class="saved-tracks" id="saved-tracks">
+                <h3>
+                    <i class="fas fa-history"></i>
+                    Kayıtlı Müzikler
+                </h3>
+                <div class="file-selection-note">
+                    <i class="fas fa-info-circle"></i>
+                    📁 Dosya müzikleri için orijinal dosyayı tekrar seçmeniz gerekecek
+                </div>
+                <div class="saved-tracks-list" id="saved-tracks-list">
+                    <!-- Kayıtlı müzikler buraya eklenecek -->
+                </div>
+            </div>
+
+            <!-- Ana Çalar -->
+            <div class="player-main" id="player-main">
+                <!-- Şarkı Bilgileri -->
+                <div class="track-info">
+                    <div class="track-title" id="track-title">Şarkı Adı</div>
+                    <div class="track-artist" id="track-artist">Sanatçı</div>
+                </div>
+
+                <!-- YouTube Video Player (gizli başlangıçta) -->
+                <div class="youtube-player-container" id="youtube-player-container" style="display: none;">
+                    <div id="youtube-player"></div>
+                    <div class="youtube-controls-overlay">
+                        <div class="youtube-overlay-message">
+                            YouTube video kontrolü aktif - Aşağıdaki kontroller ile yönetebilirsiniz
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dalga Formu ve İlerleme -->
+                <div class="waveform-container">
+                    <div class="waveform-guide-line"></div>
+                    <canvas id="waveform" class="waveform"></canvas>
+                    <div class="progress-overlay">
+                        <div class="progress-bar" id="progress-bar"></div>
+                        <div class="time-cursor" id="time-cursor"></div>
+                        <div class="time-tooltip" id="time-tooltip">0:00</div>
+                        <div class="hover-tooltip" id="hover-tooltip">0:00</div>
+                        <div class="waveform-bookmarks" id="waveform-bookmarks">
+                            <!-- Dalga formu üzerindeki bayraklar -->
+                        </div>
+                        <div class="waveform-bookmark-labels" id="waveform-bookmark-labels">
+                            <!-- Bayrak isimleri buraya eklenecek -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Zaman Bilgileri -->
+                <div class="time-info">
+                    <span id="current-time">0:00</span>
+                    <span id="total-time">0:00</span>
+                </div>
+
+                <!-- Kontroller -->
+                <div class="controls">
+                    <button type="button" id="prev-btn" class="control-btn" title="10 saniye geri">
+                        <i class="fas fa-step-backward"></i>
+                    </button>
+                    <button type="button" id="play-btn" class="control-btn play-btn" title="Çal/Duraklat">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button type="button" id="next-btn" class="control-btn" title="10 saniye ileri">
+                        <i class="fas fa-step-forward"></i>
+                    </button>
+                    <button type="button" id="bookmark-btn" class="control-btn bookmark-btn" title="Hızlı bayrak ekle">
+                        <i class="fas fa-bookmark"></i>
+                    </button>
+                </div>
+
+                <!-- Ses Kontrolü -->
+                <div class="volume-control">
+                    <i class="fas fa-volume-down"></i>
+                    <input type="range" id="volume-slider" min="0" max="100" value="50" class="volume-slider" title="Ses seviyesi">
+                    <i class="fas fa-volume-up"></i>
+                </div>
+
+                <!-- Gecikme Kontrolü -->
+                <div class="delay-control">
+                    <label for="delay-input">Gecikme (saniye):</label>
+                    <input type="number" id="delay-input" min="0" max="60" value="0" class="delay-input">
+                    <button type="button" id="delayed-play" class="delay-btn">
+                        <i class="fas fa-clock"></i>
+                        Gecikmeli Çal
+                    </button>
+                    <button type="button" id="cancel-delay" class="cancel-delay-btn">
+                        <i class="fas fa-times"></i>
+                        İptal
+                    </button>
+                </div>
+
+                <!-- Müzik Kaydetme -->
+                <div class="save-control">
+                    <button type="button" id="save-track" class="save-btn">
+                        <i class="fas fa-save"></i>
+                        Müziği Kaydet
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bayraklar (Bookmarks) -->
+            <div class="bookmarks-section" id="bookmarks-section">
+                <h3>
+                    <i class="fas fa-flag"></i>
+                    Bayraklar
+                </h3>
+                <div class="bookmark-add">
+                    <input type="text" id="bookmark-name" placeholder="Bayrak adı..." class="bookmark-name-input">
+                    <button type="button" id="add-bookmark" class="add-bookmark-btn">
+                        <i class="fas fa-plus"></i>
+                        Bayrak Ekle
+                    </button>
+                </div>
+                <div class="bookmarks-list" id="bookmarks-list">
+                    <!-- Bayraklar buraya eklenecek -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gizli Audio Element -->
+    <audio id="audio-player" preload="metadata"></audio>
+
+    <script src="youtube-integration.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
