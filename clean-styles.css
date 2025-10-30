@@ -1,0 +1,139 @@
+/* ===== TEMİZ BAŞLANGIÇ - WAVEFORM BAYRAK SİSTEMİ KALDIRILDI ===== */
+
+/* Waveform container - bayrak sistemi olmadan */
+.waveform-container {
+    position: relative;
+    margin-bottom: 20px;
+    height: 100px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    overflow: hidden;
+    /* Normal overflow - bayrak yok */
+}
+
+/* Waveform bookmarks container - boş kalacak */
+.waveform-bookmarks {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+}
+
+/* Waveform bookmark labels container - boş kalacak */
+.waveform-bookmark-labels {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Waveform kılavuz çizgileri - satır göstergesi */
+.waveform-container::before {
+    content: '';
+    position: absolute;
+    top: 25%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.15);
+    z-index: 1;
+}
+
+.waveform-container::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.15);
+    z-index: 1;
+}
+
+.waveform-guide-line {
+    position: absolute;
+    top: 75%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.15);
+    z-index: 1;
+}
+
+/* Waveform canvas */
+.waveform {
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* Progress overlay */
+.progress-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    z-index: 3;
+}
+
+/* Progress bar */
+.progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+    transition: width 0.1s ease;
+    z-index: 2;
+}
+
+/* Time cursor - sürüklenebilir */
+.time-cursor {
+    position: absolute;
+    top: 0;
+    width: 4px; /* Biraz daha kalın - tutmak için */
+    height: 100%;
+    background: #ff4757;
+    z-index: 4;
+    cursor: grab;
+    transition: left 0.1s ease;
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(255, 71, 87, 0.5);
+}
+
+.time-cursor:hover {
+    width: 6px;
+    background: #ff2e43;
+    box-shadow: 0 0 12px rgba(255, 71, 87, 0.8);
+}
+
+.time-cursor:active,
+.time-cursor.dragging {
+    cursor: grabbing;
+    width: 8px; /* Daha kalın - sürükleme sırasında */
+    background: #ff1744; /* Daha parlak kırmızı */
+    box-shadow: 0 0 20px rgba(255, 71, 87, 1);
+    transition: none; /* Sürükleme sırasında animasyon yok */
+    transform: scaleY(1.1); /* Hafif uzat */
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .waveform-container {
+        height: 80px;
+    }
+}
+
+@media (max-width: 480px) {
+    .waveform-container {
+        height: 60px;
+    }
+}
