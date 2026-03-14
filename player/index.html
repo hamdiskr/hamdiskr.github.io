@@ -3,134 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Oynatıcı - Baghead (2023)</title>
+    <title>Video</title>
     <!-- Video.js CSS -->
     <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
     <style>
-        /* Özelleştirilmiş Oynatıcı Stilleri */
-        body, html {
+        /* Tam ekran ve sıfır kenar boşluğu */
+        html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            background: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: Arial, Helvetica, sans-serif;
+            background-color: #000;
+            overflow: hidden; /* Kaydırma çubuklarını gizle */
         }
-        .player-wrapper {
-            max-width: 1280px;
+        /* Oynatıcıyı tamamen kapla */
+        #ozel-oynatici {
             width: 100%;
-            padding: 20px;
-            box-sizing: border-box;
+            height: 100%;
         }
-        /* Özel Tema - Kırmızı tonlar */
-        .video-js .vjs-big-play-button {
-            background-color: rgba(220, 20, 60, 0.9); /* Koyu kırmızı */
-            border: 2px solid white;
-            border-radius: 50%;
-            width: 80px;
-            height: 80px;
-            line-height: 80px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 20px rgba(255,255,255,0.3);
+        /* Video.js'in kendi stilleriyle uyum için */
+        .video-js.vjs-fluid {
+            height: 100% !important;
+            padding-top: 0 !important; /* Fluid oranını kaldır, tam ekran yap */
         }
-        .video-js:hover .vjs-big-play-button {
-            background-color: #ff3366; /* Daha açık kırmızı */
-        }
-        .video-js .vjs-control-bar {
-            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-        }
-        .video-js .vjs-play-progress {
-            background-color: #dc143c; /* Koyu kırmızı ilerleme çubuğu */
-        }
-        .video-js .vjs-slider {
-            background-color: rgba(255,255,255,0.3);
-        }
-        /* Yükleme durumu metni */
-        .video-js .vjs-error .vjs-error-display .vjs-modal-dialog-content {
-            color: white;
-            font-size: 18px;
-            text-align: center;
-            padding: 20px;
-        }
-        .info-text {
-            color: #aaa;
-            text-align: center;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-        .info-text a {
-            color: #dc143c;
-            text-decoration: none;
-        }
+        /* Oynatıcı kontrol çubuğu isteğe bağlı görünür, isterseniz gizleyebilirsiniz */
+        /* .video-js .vjs-control-bar { display: none; } */
     </style>
 </head>
 <body>
-    <div class="player-wrapper">
-        <video
-            id="ozel-oynatici"
-            class="video-js vjs-default-skin vjs-big-play-centered vjs-16-9"
-            controls
-            preload="auto"
-            data-setup='{}'
-        >
-            <!-- Kaynaklar JavaScript ile eklenecek -->
-        </video>
-        <div class="info-text">
-            🎬 Oynatıcı: Baghead (2023) | 
-            <a href="#" onclick="window.location.reload();">Yeniden Dene</a> | 
-            Eğer video oynatmazsa, <strong>CORS</strong> sorunu olabilir.
-        </div>
-    </div>
+    <!-- Sadece video elementi -->
+    <video
+        id="ozel-oynatici"
+        class="video-js vjs-default-skin"
+        controls
+        preload="auto"
+        data-setup='{}'
+    ></video>
 
-    <!-- Video.js ve HLS desteği -->
+    <!-- Video.js Kütüphanesi -->
     <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Video linki (sabit olarak verilen link)
+            // Video linki (sabit)
             const videoUrl = 'https://vs14.gamephotos.pro/v/Baghead.2023.Bluray.1080p.DUAL.x264-HDM/1080.m3u8';
-            
+
             // Oynatıcıyı başlat
             const player = videojs('ozel-oynatici', {
-                responsive: true,
-                fluid: true,       // Kapsayıcıya göre boyutlanır
                 controls: true,
                 autoplay: false,
                 preload: 'auto',
+                fluid: false, // Kendi yüksekliğimizi kontrol edeceğiz
                 html5: {
                     hls: {
                         enableLowInitialPlaylist: true,
                         smoothQualityChange: true,
-                        overrideNative: true // Bazı cihazlarda yerel HLS desteğini geçersiz kılmak için
+                        overrideNative: true
                     }
                 }
             });
 
-            // Hata yönetimi
-            player.on('error', function() {
-                console.error('Oynatıcı hatası:', player.error());
-                // Kullanıcıya daha anlaşılır bir mesaj göster
-                const errorMessage = document.createElement('div');
-                errorMessage.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; background: rgba(0,0,0,0.7); padding: 20px; border-radius: 8px; text-align: center; z-index: 10;';
-                errorMessage.innerHTML = '⚠️ Video yüklenirken hata oluştu.<br>Sebebi: <strong>CORS Politikası</strong> veya <strong>Erişim Engeli</strong> olabilir.<br><br>📌 Alternatif çözüm için sayfadaki bilgi notunu inceleyin.';
-                document.querySelector('.player-wrapper').appendChild(errorMessage);
-            });
-
-            // Kaynağı yükle (HLS olduğu için tipi application/x-mpegURL)
+            // Kaynağı yükle (HLS)
             player.src({
                 src: videoUrl,
                 type: 'application/x-mpegURL'
             });
 
-            // Oynatıcı hazır olduğunda
-            player.ready(function() {
-                console.log('Oynatıcı hazır, video yükleniyor...');
-                // İsteğe bağlı: otomatik oynatma dene
-                // player.play().catch(e => console.log('Otomatik oynatma engellendi:', e));
+            // Hata durumunda sessiz kal (konsola yaz, ekrana bir şey gösterme)
+            player.on('error', function() {
+                console.error('Video yüklenemedi (CORS veya bağlantı hatası):', videoUrl);
             });
         });
     </script>
