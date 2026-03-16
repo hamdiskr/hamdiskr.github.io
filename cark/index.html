@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Çarkıfelek Sıra Belirleyici</title>
+    <style>
+        /* (stillendirme aynen korundu) */
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: linear-gradient(145deg, #0d1a2b 0%, #1b2f44 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 10px;
+        }
+        .container {
+            background: rgba(10, 20, 30, 0.8);
+            backdrop-filter: blur(12px);
+            border-radius: 48px;
+            box-shadow: 0 25px 50px -8px black, inset 0 2px 4px rgba(255,255,200,0.2);
+            padding: 20px;
+            max-width: 950px;
+            width: 100%;
+            border: 1px solid rgba(255,215,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #ffe484;
+            text-shadow: 0 0 15px #ffb347, 0 2px 2px black;
+            margin: 0 0 25px 0;
+            font-size: clamp(1.8rem, 6vw, 2.6rem);
+            letter-spacing: 2px;
+        }
+        .input-area {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .input-area input {
+            flex: 1 1 250px;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 60px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(5px);
+            color: white;
+            font-size: 1rem;
+            border: 1px solid rgba(255,220,100,0.4);
+            transition: 0.2s;
+        }
+        .input-area input::placeholder {
+            color: rgba(255,255,200,0.8);
+        }
+        .input-area input:focus {
+            outline: none;
+            background: rgba(255,255,255,0.25);
+            border-color: #ffaa33;
+        }
+        .input-area button {
+            padding: 14px 28px;
+            background: #f9b83a;
+            border: none;
+            border-radius: 60px;
+            color: #111;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 6px 14px #ffb34780;
+            transition: 0.2s;
+            border: 1px solid #ffdb9d;
+            flex: 0 0 auto;
+        }
+        .input-area button:hover {
+            background: #ffa01e;
+            transform: scale(1.02);
+            box-shadow: 0 10px 20px #ffaa33;
+        }
+        .names-list {
+            background: rgba(0,0,0,0.35);
+            border-radius: 50px;
+            padding: 18px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            min-height: 70px;
+            border: 1px dashed rgba(255,200,100,0.5);
+            backdrop-filter: blur(4px);
+        }
+        .name-tag {
+            background: rgba(30,30,50,0.7);
+            padding: 7px 18px;
+            border-radius: 40px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: white;
+            backdrop-filter: blur(2px);
+            border: 1px solid rgba(255,255,255,0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 6px black;
+            transition: all 0.3s ease;
+            opacity: 1;
+            transform: scale(1);
+        }
+        .name-tag.removing {
+            opacity: 0;
+            transform: scale(0);
+            pointer-events: none;
+        }
+        .name-tag button {
+            background: none;
+            border: none;
+            color: #ffa07a;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0 5px;
+            transition: 0.2s;
+        }
+        .name-tag button:hover {
+            color: #ff4d4d;
+            transform: scale(1.2);
+        }
+        .wheel-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            margin: 15px 0 20px;
+            width: 100%;
+            aspect-ratio: 1/1;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            border-radius: 50%;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 0 4px #332211, 0 0 20px #ffcc66;
+            background: #2a3f54;
+            border: 3px solid #ffcf8a;
+        }
+        .spin-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 30px;
+            background: #d44f2e;
+            color: white;
+            border: none;
+            border-radius: 60px;
+            font-size: clamp(1.2rem, 5vw, 1.8rem);
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #73200b, 0 12px 25px black;
+            z-index: 20;
+            transition: 0.08s linear;
+            border: 2px solid #ffc857;
+            text-shadow: 0 2px 0 #333;
+            white-space: nowrap;
+        }
+        .spin-btn:active {
+            transform: translate(-50%, -50%) translateY(5px);
+            box-shadow: 0 3px 0 #73200b, 0 8px 20px black;
+        }
+        .spin-btn:disabled {
+            opacity: 0.4;
+            pointer-events: none;
+            filter: grayscale(0.5);
+        }
+        .rank-area {
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(5px);
+            border-radius: 40px;
+            padding: 18px;
+            margin-top: 15px;
+            border: 1px solid rgba(255,200,100,0.3);
+        }
+        .rank-title {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #ffe166;
+            margin-bottom: 12px;
+            padding-left: 8px;
+            text-shadow: 0 2px 0 #00000060;
+        }
+        .rank-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .rank-item {
+            background: rgba(255,255,255,0.08);
+            padding: 12px 18px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-left: 6px solid;
+            color: #f0f0f0;
+            font-size: 1.1rem;
+            backdrop-filter: blur(2px);
+            border: 1px solid rgba(255,255,200,0.15);
+            animation: slideIn 0.4s ease;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        .rank-number {
+            font-weight: bold;
+            min-width: 40px;
+            color: #ffd966;
+            font-size: 1.2rem;
+        }
+        .finished-message {
+            text-align: center;
+            font-size: clamp(1.5rem, 6vw, 2.4rem);
+            font-weight: bold;
+            color: #fffbcb;
+            margin-top: 15px;
+            padding: 18px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 60px;
+            text-shadow: 0 0 20px gold, 2px 2px 0 #000;
+            border: 3px solid gold;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+        .hidden {
+            display: none;
+        }
+        
+        /* Patlama efekti overlay */
+        .explosion-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .explosion-name {
+            background: linear-gradient(145deg, #ffd700, #ffa500);
+            padding: 30px 60px;
+            border-radius: 80px;
+            font-size: clamp(2rem, 8vw, 4rem);
+            font-weight: bold;
+            color: #1a0f00;
+            text-shadow: 0 0 20px white, 0 0 40px #ffaa00;
+            box-shadow: 0 0 50px #ffaa00;
+            border: 4px solid white;
+            transform: scale(0);
+            animation: explosion 1.2s forwards;
+            white-space: nowrap;
+            z-index: 1001;
+        }
+        
+        @keyframes explosion {
+            0% {
+                transform: scale(0) rotate(0deg);
+                opacity: 0;
+            }
+            20% {
+                transform: scale(1.2) rotate(5deg);
+                opacity: 1;
+            }
+            40% {
+                transform: scale(1) rotate(-5deg);
+                opacity: 1;
+            }
+            60% {
+                transform: scale(1.1) rotate(3deg);
+                opacity: 1;
+            }
+            80% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(0) rotate(0deg);
+                opacity: 0;
+            }
+        }
+        
+        /* Patlama parçacıkları */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #ffd700;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000;
+            animation: confetti 1.2s ease-out forwards;
+        }
+        
+        @keyframes confetti {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(0);
+                opacity: 0;
+            }
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(255,255,200,0.5);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>⚙️ ÇARKIFELEK SIRA BELİRLEYİCİ ⚙️</h1>
+
+    <div class="input-area">
+        <input type="text" id="nameInput" placeholder="İsim yaz ve Ekle'ye bas">
+        <button id="addBtn">➕ EKLE</button>
+    </div>
+
+    <div class="names-list" id="namesList"></div>
+
+    <div class="wheel-wrapper">
+        <canvas id="wheelCanvas" width="500" height="500"></canvas>
+        <button class="spin-btn" id="spinBtn" style="display: none;">🎰 DÖNDÜR</button>
+    </div>
+
+    <div class="rank-area">
+        <div class="rank-title">🏆 SIRALAMA</div>
+        <div class="rank-list" id="rankList"></div>
+    </div>
+
+    <div id="finishedMessage" class="finished-message hidden"></div>
+    <footer>her dönüşte 6+ tur · rastgele yerleşim · sıralı çekiliş</footer>
+</div>
+
+<div id="explosionOverlay" class="explosion-overlay hidden">
+    <div class="explosion-name" id="explosionName"></div>
+</div>
+
+<script>
+(function() {
+    // ----- SABİT SIRA (kazanma sırası) -----
+    const SIRALI_ISIMLER = ["Tayfun", "Hakan pilavcı", "Ayşe Nur", "Erol", "Rezzan", "Elif", "Murat", "Emre"];
+    let siraIndex = 0; // sıradaki kişinin indeksi
+
+    // ----- KULLANICININ EKLEDİĞİ İSİMLER (karışık olabilir) -----
+    let participants = [];
+    let ranking = [];
+    let colors = [];
+    let wheelRotation = 0;           // çarkın açısı (rad)
+    let spinning = false;
+    let spinAnimationId = null;
+
+    // İbre yukarıyı gösterir (12 yönü)
+    const pointerAngle = -Math.PI / 2;
+
+    // Animasyon değişkenleri
+    let targetRotation = 0;           // hedef açı (duracağı açı, mod 2pi)
+    const spinDuration = 3500;           // animasyon süresi (ms) - 3.5 saniye
+    let spinStartTime = null;
+    let startRotation = 0;
+
+    // canvas ve elementler
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const spinBtn = document.getElementById('spinBtn');
+    const nameInput = document.getElementById('nameInput');
+    const addBtn = document.getElementById('addBtn');
+    const namesListDiv = document.getElementById('namesList');
+    const rankListDiv = document.getElementById('rankList');
+    const finishedMessageDiv = document.getElementById('finishedMessage');
+    const explosionOverlay = document.getElementById('explosionOverlay');
+    const explosionName = document.getElementById('explosionName');
+
+    // ----- YARDIMCI FONKSİYONLAR -----
+    function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function generateColors(count) {
+        const hueStep = 360 / Math.max(count, 1);
+        return Array.from({ length: count }, (_, i) => `hsl(${i * hueStep}, 80%, 65%)`);
+    }
+
+    // Son kişiyi otomatik ekle - artık sıradaki isimle eşleşme koşulu yok
+    function checkAndAddLastPerson() {
+        // Eğer listede sadece 1 kişi kaldıysa ve daha çekilecek sıra varsa
+        if (participants.length === 1 && siraIndex < SIRALI_ISIMLER.length) {
+            const lastPerson = participants[0];
+            
+            // Patlama efektini göster
+            showExplosionEffect(lastPerson);
+            
+            setTimeout(() => {
+                ranking.push(lastPerson);
+                updateRankingDisplay();
+                
+                // Son kişiyi listeden çıkar
+                updateParticipants([]);
+                
+                // Sıradaki kişi indeksini artır
+                siraIndex++;
+                
+                // Buton görünürlüğünü güncelle
+                updateSpinButtonVisibility();
+            }, 600);
+        }
+    }
+
+    // Patlama efekti oluştur
+    function showExplosionEffect(name) {
+        // İsmi ata
+        explosionName.textContent = name;
+        
+        // Overlay'i göster (hidden class'ını kaldır)
+        explosionOverlay.classList.remove('hidden');
+        
+        // Parçacıklar oluştur
+        for (let i = 0; i < 50; i++) {
+            setTimeout(() => {
+                createConfetti();
+            }, i * 20);
+        }
+        
+        // Patlama bitince overlayi gizle
+        setTimeout(() => {
+            explosionOverlay.classList.add('hidden');
+        }, 1200);
+    }
+    
+    function createConfetti() {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        
+        // Rastgele renk
+        const colors = ['#ffd700', '#ffaa00', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffcc5c'];
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        
+        // Rastgele boyut
+        const size = Math.random() * 15 + 5;
+        confetti.style.width = size + 'px';
+        confetti.style.height = size + 'px';
+        
+        // Rastgele başlangıç pozisyonu (merkezden biraz sapma ile)
+        const startX = window.innerWidth / 2 + (Math.random() - 0.5) * 100;
+        const startY = window.innerHeight / 2 + (Math.random() - 0.5) * 100;
+        confetti.style.left = startX + 'px';
+        confetti.style.top = startY + 'px';
+        
+        // Rastgele bitiş pozisyonu
+        const tx = (Math.random() - 0.5) * 800;
+        const ty = (Math.random() - 0.5) * 800;
+        confetti.style.setProperty('--tx', tx + 'px');
+        confetti.style.setProperty('--ty', ty + 'px');
+        
+        // Rastgele dönüş
+        confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+        
+        document.body.appendChild(confetti);
+        
+        setTimeout(() => {
+            confetti.remove();
+        }, 1200);
+    }
+
+    // participants güncellendiğinde renkleri yenile ve çarkı çiz
+    function updateParticipants(newList) {
+        participants = [...newList];
+        colors = generateColors(participants.length);
+        drawWheel();
+        updateNamesList();
+        updateSpinButtonVisibility();
+        
+        // DİKKAT: Burada checkAndAddLastPerson'u KALDIRDIK! (Artık sadece belirli yerlerde çağrılacak)
+        
+        if (participants.length === 0) {
+            ctx.clearRect(0, 0, 500, 500);
+        }
+    }
+
+    // İsim etiketlerini güncelle (eklenme sırasını gösterir)
+    function updateNamesList() {
+        namesListDiv.innerHTML = '';
+        participants.forEach((name, index) => {
+            const tag = document.createElement('span');
+            tag.className = 'name-tag';
+            tag.style.background = colors[index] + '40';
+            tag.style.borderLeft = `4px solid ${colors[index]}`;
+            tag.innerHTML = `${name} <button class="remove-name" data-index="${index}">✖</button>`;
+            namesListDiv.appendChild(tag);
+        });
+        document.querySelectorAll('.remove-name').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (spinning) return;
+                const index = parseInt(e.target.dataset.index);
+                removeParticipantWithAnimation(index);
+            });
+        });
+    }
+
+    function removeParticipantWithAnimation(index) {
+        const nameTag = document.querySelectorAll('.name-tag')[index];
+        if (nameTag) {
+            nameTag.classList.add('removing');
+            
+            setTimeout(() => {
+                if (spinning) return;
+                const newList = participants.filter((_, i) => i !== index);
+                updateParticipants(newList);
+                
+                // Silme işleminden sonra son kişi kontrolü yap
+                checkAndAddLastPerson();
+                
+                if (newList.length === 0) {
+                    ranking = [];
+                    updateRankingDisplay();
+                    siraIndex = 0;
+                }
+                updateSpinButtonVisibility();
+            }, 300); // Animasyon süresi kadar bekle
+        }
+    }
+
+    function updateRankingDisplay() {
+        rankListDiv.innerHTML = '';
+        ranking.forEach((name, idx) => {
+            const item = document.createElement('div');
+            item.className = 'rank-item';
+            item.style.borderLeftColor = `hsl(${idx * 45}, 80%, 65%)`;
+            item.innerHTML = `<span class="rank-number">${idx + 1}.</span> ${name}`;
+            rankListDiv.appendChild(item);
+        });
+    }
+
+    function updateSpinButtonVisibility() {
+        // Sıradaki kişi participants içinde var mı? Ve en az 2 kişi olmalı.
+        const nextName = SIRALI_ISIMLER[siraIndex];
+        const nextIndex = participants.indexOf(nextName);
+        
+        // Buton görünürlük koşulu:
+        // 1. participants.length >= 2 (çarkta en az 2 kişi var)
+        // 2. spinning false (çark dönmüyor)
+        // 3. nextIndex !== -1 (sıradaki kişi listede var)
+        // 4. siraIndex < SIRALI_ISIMLER.length (daha çekilecek kişi var)
+        if (participants.length >= 2 && !spinning && nextIndex !== -1 && siraIndex < SIRALI_ISIMLER.length) {
+            spinBtn.style.display = 'block';
+            spinBtn.disabled = false;
+        } else {
+            spinBtn.style.display = 'none';
+            spinBtn.disabled = true;
+        }
+
+        // Çekiliş bitti mi?
+        if (siraIndex >= SIRALI_ISIMLER.length) {
+            finishedMessageDiv.classList.remove('hidden');
+            finishedMessageDiv.textContent = '🎉 ÇEKİLİŞ TAMAMLANDI 🎉';
+        } else {
+            finishedMessageDiv.classList.add('hidden');
+        }
+    }
+
+    // Çarkı çiz (ibre yukarıda, çıkıntılar)
+    function drawWheel() {
+        ctx.clearRect(0, 0, 500, 500);
+        if (participants.length === 0) return;
+
+        const centerX = 250, centerY = 250, radius = 210;
+        const anglePerSegment = (2 * Math.PI) / participants.length;
+
+        ctx.shadowColor = 'rgba(255,200,50,0.6)';
+        ctx.shadowBlur = 18;
+
+        // Dilimler
+        for (let i = 0; i < participants.length; i++) {
+            const start = i * anglePerSegment + wheelRotation;
+            const end = start + anglePerSegment;
+
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, start, end);
+            ctx.closePath();
+            ctx.fillStyle = colors[i];
+            ctx.fill();
+            ctx.strokeStyle = '#fffcf0';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            // İsim yazısı
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(start + anglePerSegment / 2);
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#0a0f1a';
+            ctx.font = 'bold 16px "Segoe UI", "Arial"';
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 8;
+            ctx.fillText(participants[i], radius * 0.7, 10);
+            ctx.restore();
+        }
+
+        // Çıkıntılar (tırtıklar)
+        ctx.shadowBlur = 10;
+        for (let i = 0; i < participants.length; i++) {
+            const notchAngle = i * anglePerSegment + wheelRotation;
+            const x1 = centerX + (radius + 8) * Math.cos(notchAngle - 0.04);
+            const y1 = centerY + (radius + 8) * Math.sin(notchAngle - 0.04);
+            const x2 = centerX + (radius + 8) * Math.cos(notchAngle + 0.04);
+            const y2 = centerY + (radius + 8) * Math.sin(notchAngle + 0.04);
+            const xTip = centerX + (radius + 22) * Math.cos(notchAngle);
+            const yTip = centerY + (radius + 22) * Math.sin(notchAngle);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(xTip, yTip);
+            ctx.closePath();
+            ctx.fillStyle = '#b0a99a';
+            ctx.fill();
+            ctx.strokeStyle = '#7a6a5a';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+
+        // Merkez göbek (sade metal)
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 25, 0, 2 * Math.PI);
+        ctx.fillStyle = '#3f3322';
+        ctx.fill();
+        ctx.strokeStyle = '#ffcc66';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // İBRE (yukarı)
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(centerX - 14, centerY - radius + 5);
+        ctx.lineTo(centerX, centerY - radius - 35);
+        ctx.lineTo(centerX + 14, centerY - radius + 5);
+        ctx.closePath();
+        ctx.fillStyle = '#a8804a';
+        ctx.fill();
+        ctx.strokeStyle = '#f0c27b';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+    }
+
+    // Hedef rotation'ı hesapla (sıradaki kişi için, rastgele nokta)
+    function calculateTargetRotation() {
+        const nextName = SIRALI_ISIMLER[siraIndex];
+        const targetIndex = participants.indexOf(nextName);
+        if (targetIndex === -1) {
+            console.error('Hedef isim participants içinde bulunamadı!');
+            return wheelRotation;
+        }
+
+        const anglePerSegment = (2 * Math.PI) / participants.length;
+        // İbre yukarıda (pointerAngle = -PI/2). Hedef dilim içinde rastgele bir nokta seç
+        const randomOffset = Math.random() * anglePerSegment; // [0, anglePerSegment)
+        // İbrenin dilim içinde randomOffset kadar kaymış olması için gereken rotation:
+        // pointerAngle = (targetIndex * anglePerSegment + rotation + randomOffset) mod 2PI
+        // => rotation = (pointerAngle - targetIndex * anglePerSegment - randomOffset) mod 2PI
+        let target = (pointerAngle - targetIndex * anglePerSegment - randomOffset) % (2 * Math.PI);
+        if (target < 0) target += 2 * Math.PI;
+        return target;
+    }
+
+    // Animasyon döngüsü (6+ tur ile)
+    function spinAnimation(now) {
+        if (!spinning) return;
+
+        const elapsed = now - spinStartTime;
+        let progress = Math.min(elapsed / spinDuration, 1); // 0 -> 1
+
+        // Easing: ease-out (önce hızlı, sonra yavaş)
+        const easeProgress = 1 - Math.pow(1 - progress, 3); // cubic out
+
+        // Toplam dönüş: hedef açı + 6 tam tur (fazladan)
+        const extraTurns = 6; // 6 tur = 12pi radyan
+        const totalTargetRotation = targetRotation + 2 * Math.PI * extraTurns;
+
+        // Başlangıçtan totalTargetRotation'a git
+        let diff = totalTargetRotation - startRotation;
+
+        const currentRotation = startRotation + diff * easeProgress;
+        wheelRotation = currentRotation;
+        drawWheel();
+
+        if (progress < 1) {
+            spinAnimationId = requestAnimationFrame(spinAnimation);
+        } else {
+            // Animasyon bitti, tam konumda olduğundan emin ol (targetRotation mod 2pi)
+            wheelRotation = targetRotation; // son açıyı netleştir
+            drawWheel();
+
+            spinning = false;
+
+            // Kazananı belirle (sıradaki kişi)
+            const winnerName = SIRALI_ISIMLER[siraIndex];
+            
+            // Patlama efektini göster
+            showExplosionEffect(winnerName);
+            
+            // Kısa bir gecikme ile devam et
+            setTimeout(() => {
+                ranking.push(winnerName);
+                updateRankingDisplay();
+
+                // Kazananı listeden hemen çıkar (animasyonsuz)
+                const winnerIndex = participants.indexOf(winnerName);
+                if (winnerIndex !== -1) {
+                    const newParticipants = participants.filter((_, idx) => idx !== winnerIndex);
+                    updateParticipants(newParticipants);
+                    
+                    // Kazanan çıkarıldıktan sonra son kişi kontrolü yap
+                    checkAndAddLastPerson();
+                }
+                
+                // Sıradaki kişi indeksini artır
+                siraIndex++;
+                
+                // Butonun görünürlüğünü güncelle
+                updateSpinButtonVisibility();
+            }, 600); // Patlama efektinin yarısında devam et
+        }
+    }
+
+    function startSpin() {
+        if (spinning) return;
+        if (participants.length < 2) return;
+
+        const nextName = SIRALI_ISIMLER[siraIndex];
+        if (participants.indexOf(nextName) === -1) {
+            alert('Sıradaki kişi listede bulunamadı! Lütfen isimleri kontrol edin.');
+            return;
+        }
+
+        // İsimleri rastgele karıştır (çarkta farklı sıralanması için)
+        participants = shuffleArray(participants);
+        colors = generateColors(participants.length); // renkleri yeniden oluştur
+        drawWheel(); // karışık hali çiz
+
+        spinning = true;
+        spinBtn.style.display = 'none'; // butonu gizle
+        spinBtn.disabled = true;
+
+        // Hedef açıyı hesapla (yeni sıraya göre)
+        targetRotation = calculateTargetRotation();
+        startRotation = wheelRotation;
+
+        // Animasyonu başlat
+        spinStartTime = performance.now();
+        if (spinAnimationId) cancelAnimationFrame(spinAnimationId);
+        spinAnimationId = requestAnimationFrame(spinAnimation);
+    }
+
+    // İsim ekleme
+    function addName() {
+        const name = nameInput.value.trim();
+        if (name === '') {
+            alert('İsim boş olamaz.');
+            return;
+        }
+        if (spinning) return;
+
+        const newList = [...participants, name];
+        updateParticipants(newList);
+        nameInput.value = '';
+        nameInput.focus();
+    }
+
+    nameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addName();
+    });
+    addBtn.addEventListener('click', addName);
+    spinBtn.addEventListener('click', startSpin);
+
+    // Başlangıçta boş liste ile başla (isimler çıkmasın)
+    updateParticipants([]);
+
+    // İlk çizim
+    drawWheel();
+})();
+</script>
+</body>
+</html>
