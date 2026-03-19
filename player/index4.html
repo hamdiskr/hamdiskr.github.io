@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gelişmiş Özel Video Oynatıcı - Demo</title>
+    <!-- HLS.js Kütüphanesi (m3u8 oynatmak için) -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        /* --- TEMEL STILLER --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
+        body { background-color: #141414; color: #e5e5e5; display: flex; flex-direction: column; min-height: 100vh; padding: 20px; }
+        h1, h3 { font-weight: 500; margin-bottom: 15px; color: #fff; }
+        .app-container { max-width: 1200px; margin: 0 auto; width: 100%; }
+
+        /* --- OYNATICI KAPSAYICI --- */
+        .video-container {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+        }
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+            cursor: pointer;
+        }
+
+        /* --- ÖZEL KONTROLLER (Netflix benzeri) --- */
+        .controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.9));
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .video-container:hover .controls { opacity: 1; pointer-events: auto; }
+        .video-container:not(:hover) .controls { opacity: 0; }
+
+        /* Üst bilgi ve seçici alanı */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        .now-playing {
+            background: rgba(0,0,0,0.6);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: 500;
+            color: white;
+            text-shadow: 0 1px 3px black;
+            border-left: 4px solid #e50914;
+        }
+        .episode-selector {
+            display: flex;
+            gap: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 16px;
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+        }
+        .episode-selector select {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            outline: none;
+        }
+        .episode-selector select option { background: #222; }
+
+        /* Alt kontrol çubuğu (play, ses, progress vs) */
+        .bottom-bar {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+        .control-button {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .control-button:hover { background: rgba(255,255,255,0.2); }
+        .control-button svg { fill: white; width: 24px; height: 24px; }
+
+        .progress-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .progress-bar {
+            flex: 1;
+            height: 5px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 5px;
+            cursor: pointer;
+            position: relative;
+        }
+        .progress-filled {
+            height: 100%;
+            background: #e50914;
+            border-radius: 5px;
+            width: 0%;
+        }
+        .time-display {
+            color: white;
+            font-size: 0.9rem;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .volume-slider {
+            width: 80px;
+            height: 5px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 5px;
+            -webkit-appearance: none;
+        }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Atlama butonları (Intro Geç, Sonrakine Geç) */
+        .skip-buttons {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .skip-button {
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.2s;
+        }
+        .skip-button:hover { background: rgba(229,9,20,0.9); transform: scale(1.05); }
+
+        /* --- PLAYLIST YÖNETİM PANELİ --- */
+        .playlist-section {
+            background: #1f1f1f;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .add-media-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .add-media-form input, .add-media-form select {
+            padding: 12px;
+            border-radius: 6px;
+            border: none;
+            background: #333;
+            color: white;
+            flex: 1 1 200px;
+        }
+        .add-media-form button {
+            padding: 12px 25px;
+            background: #e50914;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .media-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .media-item {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .media-item-title {
+            font-weight: bold;
+            color: #fff;
+        }
+        .media-item-info {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        .media-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .media-actions button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #3a3a3a;
+            color: white;
+        }
+        .media-actions button.delete-btn { background: #b9090b; }
+        .media-actions button.play-btn { background: #0071eb; }
+
+        /* --- KALDIĞIM YERLER PANELİ --- */
+        .continue-section {
+            background: #1f1f1f;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .continue-row {
+            margin-bottom: 25px;
+        }
+        .continue-row h4 {
+            margin-bottom: 15px;
+            color: #bbb;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+        .continue-items {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+        .continue-card {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            min-width: 180px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .continue-card:hover { transform: scale(1.05); background: #333; }
+        .continue-card-title { font-weight: bold; }
+        .continue-card-sub { font-size: 0.8rem; color: #aaa; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <h1>Gelişmiş Video Oynatıcı (Demo)</h1>
+
+    <!-- VİDEO OYNATICI ALANI -->
+    <div class="video-container">
+        <video id="main-video"></video>
+
+        <!-- Özel Kontroller -->
+        <div class="controls">
+            <!-- Üst Bilgi ve Sezon/Bölüm Seçici -->
+            <div class="top-bar">
+                <div class="now-playing" id="now-playing">Film Adı</div>
+                <div class="episode-selector" id="episodeSelector">
+                    <!-- Sezon dropdown'u (diziler için) -->
+                    <select id="seasonSelect" style="display: none;">
+                        <option>Sezon 1</option>
+                    </select>
+                    <!-- Bölüm dropdown'u (diziler ve seri filmler için) -->
+                    <select id="episodeSelect">
+                        <option>Bölüm Seç</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Alt Kontroller -->
+            <div class="bottom-bar">
+                <button class="control-button" id="playPauseBtn">
+                    <svg viewBox="0 0 24 24" id="playIcon">
+                        <path d="M6.51 18.87a1.002 1.002 0 0 0 1-.01l10-6c.3-.18.49-.51.49-.86s-.18-.68-.49-.86l-10-6a.99.99 0 0 0-1.01-.01c-.31.18-.51.51-.51.87v12c0 .36.19.69.51.87ZM8 7.77 15.06 12 8 16.23z"></path>
+                    </svg>
+                    <svg viewBox="0 0 24 24" id="pauseIcon" style="display: none;">
+                        <path d="M6 18h4c.55 0 1-.45 1-1V7c0-.55-.45-1-1-1H6c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1M7 8h2v8H7zM14 6c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h4c.55 0 1-.45 1-1V7c0-.55-.45-1-1-1zm3 10h-2V8h2z"></path>
+                    </svg>
+                </button>
+
+                <div class="volume-control">
+                    <button class="control-button" id="muteBtn">
+                        <svg viewBox="0 0 24 24" id="volumeHighIcon">
+                            <path d="M3 10v4c0 .55.45 1 1 1h3l3.29 3.29c.63.63 1.71.18 1.71-.71V6.41c0-.89-1.08-1.34-1.71-.71L7 9H4c-.55 0-1 .45-1 1zm13.5 2c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 4.45v.11c0 .38.22.72.57.88C16.35 6.24 18 8.17 18 10.5s-1.65 4.26-3.43 5.06c-.35.16-.57.5-.57.88v.11c0 .66.67 1.12 1.28.84C18.01 16.44 20 13.69 20 10.5s-1.99-5.94-4.72-7.06c-.61-.28-1.28.18-1.28.84z"></path>
+                        </svg>
+                    </button>
+                    <input type="range" id="volumeSlider" class="volume-slider" min="0" max="1" step="0.01" value="1">
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-filled" id="progressFilled"></div>
+                    </div>
+                    <div class="time-display" id="timeDisplay">00:00 / 00:00</div>
+                </div>
+
+                <button class="control-button" id="fullscreenBtn">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M6 14v3c0 .55.45 1 1 1h3v-2H8v-2H6zm0-4h2V8h2V6H7c-.55 0-1 .45-1 1v3zm10 5h-2v2h3c.55 0 1-.45 1-1v-3h-2v2zM16 6v2h2v2h2V7c0-.55-.45-1-1-1h-3z"></path>
+                    </svg>
+                </button>
+
+                <!-- Altyazı Butonu -->
+                <button class="control-button" id="subtitleBtn" title="Altyazı Yükle">📄</button>
+            </div>
+        </div>
+
+        <!-- Atlama Butonları (Intro Geç, Sonrakine Geç) -->
+        <div class="skip-buttons">
+            <button class="skip-button" id="skipIntroBtn" style="display: none;">⏩ Intro'u Geç</button>
+            <button class="skip-button" id="skipNextBtn" style="display: none;">⏭️ Sonrakine Geç</button>
+        </div>
+    </div>
+
+    <!-- PLAYLIST YÖNETİMİ -->
+    <div class="playlist-section">
+        <h3>📋 Playlist Yönetimi</h3>
+        <div class="add-media-form" id="addMediaForm">
+            <input type="text" id="mediaTitle" placeholder="Başlık (Örn: Inception)" required>
+            <input type="url" id="mediaUrl" placeholder="Video URL (mp4, m3u8, mp3)" required>
+            <input type="url" id="mediaSubtitle" placeholder="Altyazı URL (vtt) (opsiyonel)">
+            <select id="mediaType">
+                <option value="movie">Film</option>
+                <option value="series">Dizi (örnek)</option>
+                <option value="seriesMovie">Seri Film</option>
+            </select>
+            <!-- Dizi için sezon/bölüm bilgisi (basitleştirilmiş) -->
+            <input type="number" id="mediaSeason" placeholder="Sezon (dizi/seri film için)" value="1" min="1">
+            <input type="number" id="mediaEpisode" placeholder="Bölüm (dizi için)" value="1" min="1">
+            <button type="button" id="addMediaBtn">➕ Ekle</button>
+        </div>
+        <div id="mediaList" class="media-list">
+            <!-- Dinamik olarak doldurulacak -->
+        </div>
+    </div>
+
+    <!-- KALDIĞIM YERLER -->
+    <div class="continue-section">
+        <h3>⏯️ Kaldığım Yerler</h3>
+        <div class="continue-row">
+            <h4>📺 Diziler</h4>
+            <div class="continue-items" id="continueSeries"></div>
+        </div>
+        <div class="continue-row">
+            <h4>🎬 Filmler & Seri Filmler</h4>
+            <div class="continue-items" id="continueMovies"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // --- TANIMLAMALAR ---
+        const video = document.getElementById('main-video');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const playIcon = document.getElementById('playIcon');
+        const pauseIcon = document.getElementById('pauseIcon');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const muteBtn = document.getElementById('muteBtn');
+        const progressBar = document.getElementById('progressBar');
+        const progressFilled = document.getElementById('progressFilled');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const subtitleBtn = document.getElementById('subtitleBtn');
+        const skipIntroBtn = document.getElementById('skipIntroBtn');
+        const skipNextBtn = document.getElementById('skipNextBtn');
+        const nowPlayingDiv = document.getElementById('now-playing');
+        const episodeSelect = document.getElementById('episodeSelect');
+        const seasonSelect = document.getElementById('seasonSelect');
+        const mediaListDiv = document.getElementById('mediaList');
+        const addMediaBtn = document.getElementById('addMediaBtn');
+        const continueSeriesDiv = document.getElementById('continueSeries');
+        const continueMoviesDiv = document.getElementById('continueMovies');
+
+        // --- VERİ YÖNETİMİ (localStorage) ---
+        let mediaCollection = JSON.parse(localStorage.getItem('mediaCollection')) || [];
+        let watchProgress = JSON.parse(localStorage.getItem('watchProgress')) || {}; // { mediaId: { seconds, episodeId, season } }
+
+        // Örnek dizi verisi (statik, gösterim amaçlı)
+        const sampleSeries = {
+            id: 'series1',
+            title: 'Örnek Dizi',
+            type: 'series',
+            seasons: {
+                1: [
+                    { id: 's1e1', title: 'Bölüm 1', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', subtitle: '' },
+                    { id: 's1e2', title: 'Bölüm 2', url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', subtitle: '' }
+                ]
+            }
+        };
+
+        // --- YARDIMCI FONKSİYONLAR ---
+        function saveToLocalStorage() {
+            localStorage.setItem('mediaCollection', JSON.stringify(mediaCollection));
+            localStorage.setItem('watchProgress', JSON.stringify(watchProgress));
+        }
+
+        // Video yükleme fonksiyonu (HLS ve diğer formatlar)
+        function loadVideo(url, subtitleUrl = '') {
+            // HLS kontrolü
+            if (url.includes('.m3u8')) {
+                if (Hls.isSupported()) {
+                    const hls = new Hls();
+                    hls.loadSource(url);
+                    hls.attachMedia(video);
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = url; // Safari
+                } else {
+                    alert('HLS bu tarayıcıda desteklenmiyor.');
+                }
+            } else {
+                // MP4, MP3, M4V vb.
+                video.src = url;
+            }
+
+            // Altyazı ekleme
+            if (subtitleUrl) {
+                // Eski track'leri temizle
+                while (video.textTracks.length > 0) {
+                    video.removeChild(video.textTracks[0]);
+                }
+                const track = document.createElement('track');
+                track.kind = 'subtitles';
+                track.label = 'Türkçe';
+                track.src = subtitleUrl;
+                track.default = true;
+                video.appendChild(track);
+            }
+
+            video.load();
+            // İlerleme kaydını yükle
+            const currentMediaId = getCurrentMediaId(); // mediaId'yi bulmamız lazım
+            if (currentMediaId && watchProgress[currentMediaId]) {
+                video.currentTime = watchProgress[currentMediaId].seconds || 0;
+            }
+        }
+
+        // Oynatılan medya bilgisini güncelle (sol üst)
+        function updateNowPlaying(media) {
+            if (!media) return;
+            if (media.type === 'movie') {
+                nowPlayingDiv.textContent = media.title;
+            } else if (media.type === 'seriesMovie') {
+                nowPlayingDiv.textContent = `S${media.season || 1} - ${media.title}`;
+            } else if (media.type === 'series') {
+                const season = media.currentSeason || 1;
+                const episode = media.currentEpisode || 1;
+                const episodeTitle = media.episodes?.[season]?.[episode-1]?.title || media.title;
+                nowPlayingDiv.textContent = `S${season.toString().padStart(2,'0')} - B${episode.toString().padStart(2,'0')}: ${episodeTitle}`;
+            }
+        }
+
+        // Kaldığım yerleri listele
+        function renderContinueWatching() {
+            continueSeriesDiv.innerHTML = '';
+            continueMoviesDiv.innerHTML = '';
+            // watchProgress'teki her bir kayıt için
+            Object.keys(watchProgress).forEach(mediaId => {
+                const media = mediaCollection.find(m => m.id === mediaId);
+                if (!media) return;
+                const card = document.createElement('div');
+                card.className = 'continue-card';
+                card.setAttribute('data-media-id', mediaId);
+                card.innerHTML = `
+                    <div class="continue-card-title">${media.title}</div>
+                    <div class="continue-card-sub">${media.type === 'series' ? 'Dizi' : 'Film'} • Kaldığın yer: ${Math.floor(watchProgress[mediaId].seconds / 60)}:${Math.floor(watchProgress[mediaId].seconds % 60).toString().padStart(2,'0')}</div>
+                `;
+                card.addEventListener('click', () => {
+                    // Oynatıcıya yükle ve ilerlet
+                    loadVideo(media.url, media.subtitleUrl);
+                    updateNowPlaying(media);
+                    video.currentTime = watchProgress[mediaId].seconds;
+                    // Sezon/bölüm dropdown'larını güncelle
+                    if (media.type === 'series' && media.seasons) {
+                        populateSeasonEpisode(media);
+                    }
+                });
+                if (media.type === 'series') {
+                    continueSeriesDiv.appendChild(card);
+                } else {
+                    continueMoviesDiv.appendChild(card);
+                }
+            });
+        }
+
+        // Sezon/bölüm dropdown'larını doldur (örnek dizi için)
+        function populateSeasonEpisode(series) {
+            if (!series || series.type !== 'series') return;
+            seasonSelect.style.display = 'inline-block';
+            seasonSelect.innerHTML = '';
+            Object.keys(series.seasons).forEach(season => {
+                const option = document.createElement('option');
+                option.value = season;
+                option.textContent = `Sezon ${season}`;
+                seasonSelect.appendChild(option);
+            });
+            // İlk sezonu seç ve bölümleri doldur
+            updateEpisodesForSeason(series, seasonSelect.value);
+        }
+
+        function updateEpisodesForSeason(series, season) {
+            episodeSelect.innerHTML = '';
+            series.seasons[season].forEach(ep => {
+                const option = document.createElement('option');
+                option.value = ep.id;
+                option.textContent = `B${ep.episodeNumber} - ${ep.title}`;
+                option.dataset.url = ep.url;
+                option.dataset.subtitle = ep.subtitle;
+                episodeSelect.appendChild(option);
+            });
+        }
+
+        // Playlist'i render et
+        function renderMediaList() {
+            mediaListDiv.innerHTML = '';
+            mediaCollection.forEach(media => {
+                const item = document.createElement('div');
+                item.className = 'media-item';
+                item.innerHTML = `
+                    <div class="media-item-title">${media.title}</div>
+                    <div class="media-item-info">Tür: ${media.type} | ${media.url.substring(0,30)}...</div>
+                    <div class="media-actions">
+                        <button class="play-btn" data-id="${media.id}">Oynat</button>
+                        <button class="delete-btn" data-id="${media.id}">Sil</button>
+                    </div>
+                `;
+                mediaListDiv.appendChild(item);
+            });
+
+            // Oynat butonlarına event ekle
+            document.querySelectorAll('.play-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.dataset.id;
+                    const media = mediaCollection.find(m => m.id === id);
+                    if (media) {
+                        loadVideo(media.url, media.subtitleUrl);
+                        updateNowPlaying(media);
+                        // Dizi ise sezon/bölüm seçiciyi hazırla
+                        if (media.type === 'series' && media.seasons) {
+                            populateSeasonEpisode(media);
+                        } else {
+                            seasonSelect.style.display = 'none';
+                            episodeSelect.style.display = 'none';
+                        }
+                    }
+                });
+            });
+
+            // Sil butonlarına event ekle
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.dataset.id;
+                    mediaCollection = mediaCollection.filter(m => m.id !== id);
+                    saveToLocalStorage();
+                    renderMediaList();
+                    renderContinueWatching();
+                });
+            });
+        }
+
+        // Yeni medya ekleme
+        addMediaBtn.addEventListener('click', () => {
+            const title = document.getElementById('mediaTitle').value.trim();
+            const url = document.getElementById('mediaUrl').value.trim();
+            const subtitleUrl = document.getElementById('mediaSubtitle').value.trim();
+            const type = document.getElementById('mediaType').value;
+            const season = document.getElementById('mediaSeason').value;
+            const episode = document.getElementById('mediaEpisode').value;
+
+            if (!title || !url) {
+                alert('Başlık ve URL zorunludur.');
+                return;
+            }
+
+            // Basit id oluştur
+            const id = Date.now() + Math.random().toString(36).substr(2, 5);
+
+            const newMedia = {
+                id,
+                title,
+                url,
+                subtitleUrl,
+                type,
+                season: type !== 'movie' ? parseInt(season) : undefined,
+                episode: type === 'series' ? parseInt(episode) : undefined,
+                // Dizi için seasons objesi (örnek)
+                ...(type === 'series' && { seasons: { 1: [{ id: 'ep1', title: 'Bölüm 1', url, subtitle: subtitleUrl }] } })
+            };
+
+            mediaCollection.push(newMedia);
+            saveToLocalStorage();
+            renderMediaList();
+
+            // Formu temizle
+            document.getElementById('mediaTitle').value = '';
+            document.getElementById('mediaUrl').value = '';
+            document.getElementById('mediaSubtitle').value = '';
+        });
+
+        // O anki medya ID'sini bul (basit)
+        function getCurrentMediaId() {
+            // Bu örnekte, oynatılan URL'ye göre eşleştirme yapıyoruz
+            const currentSrc = video.src;
+            const media = mediaCollection.find(m => m.url === currentSrc);
+            return media ? media.id : null;
+        }
+
+        // --- VİDEO OLAY DİNLEYİCİLERİ ---
+        video.addEventListener('play', () => {
+            playIcon.style.display = 'none';
+            pauseIcon.style.display = 'block';
+        });
+        video.addEventListener('pause', () => {
+            playIcon.style.display = 'block';
+            pauseIcon.style.display = 'none';
+        });
+
+        // Play/Pause butonu
+        playPauseBtn.addEventListener('click', () => {
+            if (video.paused) video.play();
+            else video.pause();
+        });
+
+        // Ses
+        volumeSlider.addEventListener('input', () => {
+            video.volume = volumeSlider.value;
+        });
+        muteBtn.addEventListener('click', () => {
+            video.muted = !video.muted;
+            volumeSlider.value = video.muted ? 0 : video.volume;
+        });
+
+        // Progress bar
+        video.addEventListener('timeupdate', () => {
+            const percent = (video.currentTime / video.duration) * 100 || 0;
+            progressFilled.style.width = percent + '%';
+            const current = formatTime(video.currentTime);
+            const duration = formatTime(video.duration);
+            timeDisplay.textContent = `${current} / ${duration}`;
+
+            // Kaldığım yeri kaydet (her 5 saniyede bir)
+            const mediaId = getCurrentMediaId();
+            if (mediaId && video.currentTime > 0) {
+                watchProgress[mediaId] = {
+                    seconds: video.currentTime,
+                    lastUpdated: Date.now()
+                };
+                saveToLocalStorage();
+            }
+        });
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '00:00';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            if (h > 0) return `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        }
+
+        progressBar.addEventListener('click', (e) => {
+            const rect = progressBar.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            video.currentTime = pos * video.duration;
+        });
+
+        // Tam ekran
+        fullscreenBtn.addEventListener('click', () => {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                document.querySelector('.video-container').requestFullscreen();
+            }
+        });
+
+        // Altyazı butonu (örnek: sadece track ekler)
+        subtitleBtn.addEventListener('click', () => {
+            const vttUrl = prompt('VTT altyazı dosyasının URL’sini girin:');
+            if (vttUrl) {
+                const track = document.createElement('track');
+                track.kind = 'subtitles';
+                track.label = 'Türkçe';
+                track.src = vttUrl;
+                track.default = true;
+                video.appendChild(track);
+            }
+        });
+
+        // Intro atlama butonu (basit örnek: 10. saniyede görünür)
+        video.addEventListener('timeupdate', () => {
+            // Örnek intro süresi: 5-15 saniye arası
+            if (video.currentTime > 5 && video.currentTime < 15) {
+                skipIntroBtn.style.display = 'block';
+            } else {
+                skipIntroBtn.style.display = 'none';
+            }
+
+            // Örnek sonrakine geç butonu (video bitimine 5 saniye kala)
+            if (video.duration - video.currentTime < 5 && video.duration - video.currentTime > 0) {
+                skipNextBtn.style.display = 'block';
+            } else {
+                skipNextBtn.style.display = 'none';
+            }
+        });
+
+        skipIntroBtn.addEventListener('click', () => {
+            video.currentTime = 15; // intro bitişi
+        });
+
+        skipNextBtn.addEventListener('click', () => {
+            // Bir sonraki videoyu bul (basit: listedeki bir sonraki)
+            const mediaId = getCurrentMediaId();
+            if (mediaId) {
+                const index = mediaCollection.findIndex(m => m.id === mediaId);
+                if (index !== -1 && index + 1 < mediaCollection.length) {
+                    const nextMedia = mediaCollection[index + 1];
+                    loadVideo(nextMedia.url, nextMedia.subtitleUrl);
+                    updateNowPlaying(nextMedia);
+                } else {
+                    alert('Sonraki video yok.');
+                }
+            }
+        });
+
+        // Sezon/bölüm değişikliği
+        episodeSelect.addEventListener('change', (e) => {
+            const selectedOption = e.target.selectedOptions[0];
+            if (selectedOption && selectedOption.dataset.url) {
+                loadVideo(selectedOption.dataset.url, selectedOption.dataset.subtitle || '');
+                // Üst bilgiyi güncelle
+                const season = seasonSelect.value;
+                const epTitle = selectedOption.textContent;
+                nowPlayingDiv.textContent = `S${season.padStart(2,'0')} - ${epTitle}`;
+            }
+        });
+
+        // --- BAŞLANGIÇ İŞLEMLERİ ---
+        // Örnek veriler ekleyelim
+        if (mediaCollection.length === 0) {
+            mediaCollection.push({
+                id: '1',
+                title: 'Big Buck Bunny (mp4)',
+                url: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+                type: 'movie'
+            });
+            mediaCollection.push({
+                id: '2',
+                title: 'Elephant Dream (m3u8)',
+                url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+                type: 'movie'
+            });
+            saveToLocalStorage();
+        }
+
+        renderMediaList();
+        renderContinueWatching();
+
+        // Varsayılan bir video yükleyelim
+        if (mediaCollection.length > 0) {
+            loadVideo(mediaCollection[0].url);
+            updateNowPlaying(mediaCollection[0]);
+        }
+    })();
+</script>
+</body>
+</html>
