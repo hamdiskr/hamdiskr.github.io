@@ -1,1 +1,40 @@
-<iframe class="rapidrame" src="https://www.hdfilmcehennemi.nl/rplayer/x7y9j0h1okjd/" scrolling="no" allowfullscreen="true"></iframe>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Fullscreen Iframe</title>
+<style>
+    html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .iframe-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .iframe-container iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+</style>
+</head>
+<body>
+
+<div class="iframe-container">
+    <iframe 
+        src="https://www.hdfilmcehennemi.nl/rplayer/x7y9j0h1okjd/" 
+        allowfullscreen>
+    </iframe>
+</div>
+
+</body>
+</html>
