@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>Envanter Yönetim Sistemi</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- ZXing for camera barcode -->
+    <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
+    <!-- SheetJS for Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Tesseract.js for OCR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+</head>
+<body>
+    <!-- Offline Indicator -->
+    <div id="offline-indicator" class="offline-indicator hidden">
+        <i class="fas fa-wifi-slash"></i> Çevrimdışı Mod
+    </div>
+
+    <!-- Sync Status -->
+    <div id="sync-status" class="sync-status hidden">
+        <i class="fas fa-sync fa-spin"></i> Senkronize ediliyor...
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <i class="fas fa-boxes"></i>
+            <span>Envanter Sistemi</span>
+        </div>
+        <div class="nav-links">
+            <a href="#" class="nav-link active" data-page="dashboard">
+                <i class="fas fa-chart-line"></i> Panel
+            </a>
+            <a href="#" class="nav-link" data-page="products">
+                <i class="fas fa-box"></i> Ürünler
+            </a>
+            <a href="#" class="nav-link" data-page="add">
+                <i class="fas fa-plus-circle"></i> Ekle
+            </a>
+            <a href="#" class="nav-link" data-page="import">
+                <i class="fas fa-file-import"></i> İçe Aktar
+            </a>
+            <a href="#" class="nav-link" data-page="settings">
+                <i class="fas fa-cog"></i> Ayarlar
+            </a>
+        </div>
+        <div class="nav-actions">
+            <button id="dark-mode-toggle" class="btn-icon" title="Karanlık Mod">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button id="sync-btn" class="btn-icon" title="Senkronize Et">
+                <i class="fas fa-cloud-upload-alt"></i>
+            </button>
+        </div>
+        <button class="mobile-menu-btn" id="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Page -->
+        <section id="page-dashboard" class="page active">
+            <div class="page-header">
+                <h1><i class="fas fa-chart-line"></i> Kontrol Paneli</h1>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-box"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="total-products">0</span>
+                            <span class="stat-label">Toplam Ürün</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon warning"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="low-stock">0</span>
+                            <span class="stat-label">Düşük Stok</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon success"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="synced-count">0</span>
+                            <span class="stat-label">Senkronize</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon info"><i class="fas fa-clock"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="pending-sync">0</span>
+                            <span class="stat-label">Bekleyen</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-content">
+                <div class="recent-activity">
+                    <h3><i class="fas fa-history"></i> Son İşlemler</h3>
+                    <div id="activity-list" class="activity-list">
+                        <p class="empty-state">Henüz işlem kaydı yok.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Products Page -->
+        <section id="page-products" class="page">
+            <div class="page-header">
+                <h1><i class="fas fa-box"></i> Ürün Listesi</h1>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="product-search" placeholder="Barkod, isim veya kategori ara...">
+                    </div>
+                    <button class="btn btn-primary" id="export-btn">
+                        <i class="fas fa-file-export"></i> Dışa Aktar
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table" id="products-table">
+                    <thead>
+                        <tr>
+                            <th>Barkod</th>
+                            <th>Ürün Adı</th>
+                            <th>Kategori</th>
+                            <th>Miktar</th>
+                            <th>Konum</th>
+                            <th>Durum</th>
+                            <th>Son Güncelleme</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-tbody">
+                        <tr class="empty-row">
+                            <td colspan="8" class="empty-state">Henüz ürün kaydı yok.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Add Product Page -->
+        <section id="page-add" class="page">
+            <div class="page-header">
+                <h1><i class="fas fa-plus-circle"></i> Ürün Ekle / Düzenle</h1>
+            </div>
+
+            <div class="form-container">
+                <!-- Barcode Input Methods -->
+                <div class="input-methods">
+                    <h3><i class="fas fa-barcode"></i> Barkod Girişi</h3>
+                    <div class="method-tabs">
+                        <button class="method-tab active" data-method="manual">
+                            <i class="fas fa-keyboard"></i> Manuel
+                        </button>
+                        <button class="method-tab" data-method="camera">
+                            <i class="fas fa-camera"></i> Kamera
+                        </button>
+                        <button class="method-tab" data-method="usb">
+                            <i class="fas fa-usb"></i> USB Okuyucu
+                        </button>
+                        <button class="method-tab" data-method="bluetooth">
+                            <i class="fab fa-bluetooth-b"></i> Bluetooth
+                        </button>
+                    </div>
+
+                    <!-- Manual Input -->
+                    <div class="method-content active" id="method-manual">
+                        <div class="form-group">
+                            <label for="barcode-input">Barkod Numarası</label>
+                            <div class="input-with-icon">
+                                <i class="fas fa-barcode"></i>
+                                <input type="text" id="barcode-input" placeholder="Barkod numarasını girin veya okutun">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Camera Scanner -->
+                    <div class="method-content" id="method-camera">
+                        <div class="scanner-container">
+                            <video id="camera-video" class="scanner-video" playsinline></video>
+                            <canvas id="camera-canvas" class="hidden"></canvas>
+                            <div class="scanner-overlay">
+                                <div class="scanner-frame"></div>
+                                <p class="scanner-hint">Barkodu çerçeveye yerleştirin</p>
+                            </div>
+                            <button class="btn btn-primary" id="start-camera-btn">
+                                <i class="fas fa-camera"></i> Kamerayı Başlat
+                            </button>
+                            <button class="btn btn-danger hidden" id="stop-camera-btn">
+                                <i class="fas fa-stop"></i> Durdur
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- USB Scanner -->
+                    <div class="method-content" id="method-usb">
+                        <div class="usb-scanner-info">
+                            <div class="info-box info">
+                                <i class="fas fa-info-circle"></i>
+                                <p>USB barkod okuyucunuzu bilgisayara takın. Okuttuğunuz barkodlar otomatik olarak yakalanacaktır.</p>
+                            </div>
+                            <div class="form-group">
+                                <label>USB Okuyucu Durumu</label>
+                                <div class="status-badge" id="usb-status">
+                                    <i class="fas fa-circle"></i> Bekleniyor...
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Son Okunan Barkod</label>
+                                <input type="text" id="usb-barcode-display" readonly placeholder="Barkod okuyucu ile okutun...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bluetooth Scanner -->
+                    <div class="method-content" id="method-bluetooth">
+                        <div class="bluetooth-scanner-info">
+                            <div class="info-box info">
+                                <i class="fab fa-bluetooth-b"></i>
+                                <p>Bluetooth barkod okuyucunuzu eşleştirin ve bağlanın.</p>
+                            </div>
+                            <button class="btn btn-primary" id="connect-bluetooth-btn">
+                                <i class="fab fa-bluetooth-b"></i> Cihaz Bul ve Bağlan
+                            </button>
+                            <div class="form-group mt-3">
+                                <label>Bağlantı Durumu</label>
+                                <div class="status-badge" id="bluetooth-status">
+                                    <i class="fas fa-circle"></i> Bağlı Değil
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Form -->
+                <form id="product-form" class="product-form">
+                    <input type="hidden" id="product-id">
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="product-barcode">Barkod *</label>
+                            <input type="text" id="product-barcode" required placeholder="Barkod numarası">
+                        </div>
+                        <div class="form-group">
+                            <label for="product-name">Ürün Adı *</label>
+                            <input type="text" id="product-name" required placeholder="Ürün adını girin">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="product-category">Kategori</label>
+                            <select id="product-category">
+                                <option value="">Kategori Seçin</option>
+                                <option value="elektronik">Elektronik</option>
+                                <option value="gida">Gıda</option>
+                                <option value="tekstil">Tekstil</option>
+                                <option value="kirtasiye">Kırtasiye</option>
+                                <option value="temizlik">Temizlik</option>
+                                <option value="diger">Diğer</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="product-quantity">Miktar *</label>
+                            <input type="number" id="product-quantity" required min="0" placeholder="0">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="product-location">Konum / Raf</label>
+                            <input type="text" id="product-location" placeholder="Örn: A-12-3">
+                        </div>
+                        <div class="form-group">
+                            <label for="product-min-stock">Minimum Stok Seviyesi</label>
+                            <input type="number" id="product-min-stock" min="0" placeholder="Uyarı için minimum miktar">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="product-description">Açıklama</label>
+                        <textarea id="product-description" rows="3" placeholder="Ürün hakkında ek bilgi..."></textarea>
+                    </div>
+
+                    <!-- Photo Upload -->
+                    <div class="form-group">
+                        <label><i class="fas fa-image"></i> Ürün Fotoğrafı</label>
+                        <div class="photo-upload-area" id="photo-upload-area">
+                            <input type="file" id="product-photo" accept="image/*" class="hidden">
+                            <div class="upload-placeholder" id="upload-placeholder">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Fotoğraf yüklemek için tıklayın veya sürükleyin</p>
+                                <span class="upload-hint">PNG, JPG, WEBP desteklenir</span>
+                            </div>
+                            <img id="photo-preview" class="photo-preview hidden" alt="Önizleme">
+                            <button type="button" class="btn btn-sm btn-danger hidden" id="remove-photo-btn">
+                                <i class="fas fa-trash"></i> Kaldır
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancel-btn">
+                            <i class="fas fa-times"></i> İptal
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Kaydet
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Import Page -->
+        <section id="page-import" class="page">
+            <div class="page-header">
+                <h1><i class="fas fa-file-import"></i> Toplu Veri Girişi</h1>
+            </div>
+
+            <div class="import-container">
+                <!-- Excel Import -->
+                <div class="import-section">
+                    <h3><i class="fas fa-file-excel"></i> Excel / CSV İçe Aktar</h3>
+                    <div class="upload-area" id="excel-upload-area">
+                        <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" class="hidden">
+                        <div class="upload-content">
+                            <i class="fas fa-file-excel excel-icon"></i>
+                            <p>Excel veya CSV dosyasını sürükleyin veya tıklayın</p>
+                            <span class="file-hint">.xlsx, .xls, .csv</span>
+                        </div>
+                    </div>
+                    <div class="template-download">
+                        <a href="#" class="link" id="download-template">
+                            <i class="fas fa-download"></i> Örnek şablon indir
+                        </a>
+                    </div>
+                    <div id="excel-preview" class="excel-preview hidden">
+                        <h4>Önizleme</h4>
+                        <div class="preview-table-container">
+                            <table class="preview-table" id="preview-table"></table>
+                        </div>
+                        <div class="preview-actions">
+                            <button class="btn btn-secondary" id="cancel-import-btn">
+                                <i class="fas fa-times"></i> İptal
+                            </button>
+                            <button class="btn btn-primary" id="confirm-import-btn">
+                                <i class="fas fa-check"></i> İçe Aktar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Photo OCR Import -->
+                <div class="import-section">
+                    <h3><i class="fas fa-camera"></i> Fotoğraftan Tablo Okuma (OCR)</h3>
+                    <div class="ocr-container">
+                        <div class="upload-area" id="ocr-upload-area">
+                            <input type="file" id="ocr-photo" accept="image/*" class="hidden">
+                            <div class="upload-content">
+                                <i class="fas fa-image"></i>
+                                <p>Tablo içeren fotoğraf yükleyin</p>
+                                <span class="file-hint">Fatura, etiket, envanter listesi vb.</span>
+                            </div>
+                        </div>
+
+                        <div id="ocr-processing" class="ocr-processing hidden">
+                            <div class="progress-ring">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </div>
+                            <p>Görüntü işleniyor...</p>
+                            <span class="ocr-status">OCR analizi yapılıyor</span>
+                        </div>
+
+                        <div id="ocr-result" class="ocr-result hidden">
+                            <h4>Tespit Edilen Veriler</h4>
+                            <div class="ocr-correction-note">
+                                <i class="fas fa-info-circle"></i>
+                                Lütfen verileri kontrol edin ve düzeltmeleri yapın.
+                            </div>
+                            <div class="preview-table-container">
+                                <table class="preview-table" id="ocr-preview-table"></table>
+                            </div>
+                            <div class="preview-actions">
+                                <button class="btn btn-secondary" id="cancel-ocr-btn">
+                                    <i class="fas fa-times"></i> İptal
+                                </button>
+                                <button class="btn btn-primary" id="confirm-ocr-btn">
+                                    <i class="fas fa-check"></i> Onayla ve Kaydet
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Settings Page -->
+        <section id="page-settings" class="page">
+            <div class="page-header">
+                <h1><i class="fas fa-cog"></i> Ayarlar</h1>
+            </div>
+
+            <div class="settings-container">
+                <div class="settings-card">
+                    <h3><i class="fas fa-user"></i> Kullanıcı Bilgileri</h3>
+                    <div class="form-group">
+                        <label>Kullanıcı Adı</label>
+                        <input type="text" id="setting-username" placeholder="Kullanıcı adınız">
+                    </div>
+                    <div class="form-group">
+                        <label>E-posta</label>
+                        <input type="email" id="setting-email" placeholder="ornek@email.com">
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3><i class="fas fa-sliders-h"></i> Uygulama Ayarları</h3>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <span class="setting-name">Otomatik Senkronizasyon</span>
+                            <span class="setting-desc">Online olduğunda otomatik senkronize et</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-auto-sync" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <span class="setting-name">Düşük Stok Uyarısı</span>
+                            <span class="setting-desc">Stok kritik seviyeye düştüğünde bildirim göster</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-low-stock-alert" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <span class="setting-name">Barkod Sesli Bildirim</span>
+                            <span class="setting-desc">Barkod okunduğunda ses çal</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="setting-sound" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3><i class="fas fa-database"></i> Veri Yönetimi</h3>
+                    <div class="setting-actions">
+                        <button class="btn btn-secondary" id="backup-btn">
+                            <i class="fas fa-download"></i> Yedekle
+                        </button>
+                        <button class="btn btn-secondary" id="restore-btn">
+                            <i class="fas fa-upload"></i> Geri Yükle
+                        </button>
+                        <input type="file" id="restore-file" accept=".json" class="hidden">
+                        <button class="btn btn-danger" id="clear-data-btn">
+                            <i class="fas fa-trash-alt"></i> Tüm Verileri Sil
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3><i class="fas fa-info-circle"></i> Hakkında</h3>
+                    <p class="about-text">
+                        <strong>Envanter Yönetim Sistemi</strong><br>
+                        Versiyon: 1.0.0<br>
+                        Offline çalışabilen, barkod okuyucu destekli, OCR entegreli envanter takip uygulaması.
+                    </p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Modal for Product Details -->
+    <div id="product-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Ürün Detayları</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Dynamic content -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-close-btn">Kapat</button>
+                <button class="btn btn-primary" id="modal-edit-btn">
+                    <i class="fas fa-edit"></i> Düzenle
+                </button>
+                <button class="btn btn-danger" id="modal-delete-btn">
+                    <i class="fas fa-trash"></i> Sil
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/database.js"></script>
+    <script src="js/barcode-scanner.js"></script>
+    <script src="js/usb-scanner.js"></script>
+    <script src="js/bluetooth-scanner.js"></script>
+    <script src="js/ocr-handler.js"></script>
+    <script src="js/excel-handler.js"></script>
+    <script src="js/sync-manager.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
